@@ -5,7 +5,7 @@
 - Họ tên: **Trần Xuân Trường**
 - MSSV: **2A202603617**
 - Lớp: **K5-L3A**
-- Repo nộp hiện tại: `K5-L3A-TranXuanTruong-2A202603617-Guardrails-HITL-Responsible-AI`.
+- Repo nộp hiện tại: `K5-L3A-DAY11-TranXuanTruong-2A202603617-Guardrails-HITL-Responsible-AI`.
   Tên/link repo được giữ nguyên theo hướng dẫn trực tiếp của mentor.
 
 ### Cấu hình thực tế và cách chạy
