@@ -39,6 +39,7 @@ from core.config import (
     PROVIDER_GEMINI,
     get_red_model,
     get_red_provider,
+    red_openai_client_kwargs,
 )
 
 # Lab mặc định tắt anonymous usage stats của NeMo; đặt =0 trong .env để bật lại.
@@ -237,12 +238,16 @@ def _model_entry(provider: str, model: str) -> dict:
             "api_key_env_var": "GOOGLE_API_KEY",
             "parameters": {"base_url": GEMINI_OPENAI_BASE_URL},
         }
-    return {
+    entry = {
         "type": "main",
         "engine": "openai",
         "model": model,
         "api_key_env_var": "OPENAI_API_KEY",
     }
+    base_url = red_openai_client_kwargs().get("base_url")
+    if base_url:
+        entry["parameters"] = {"base_url": base_url}
+    return entry
 
 
 def build_rails_dict(

@@ -170,7 +170,16 @@ def get_openai_api_key() -> str:
 
 
 def red_openai_client_kwargs() -> dict:
-    return {"api_key": get_openai_api_key() or None}
+    kwargs = {"api_key": get_openai_api_key() or None,
+              "timeout": 120.0, "max_retries": 1}
+    base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
+    if base_url:
+        from urllib.parse import urlsplit
+        url = urlsplit(base_url)
+        if url.scheme != "https" or not url.hostname or url.username or url.password or url.query or url.fragment:
+            raise ValueError("OPENAI_BASE_URL must be an HTTPS URL without embedded credentials or query")
+        kwargs["base_url"] = base_url.rstrip("/")
+    return kwargs
 
 
 def red_provider_label(tier: str = "advance") -> str:

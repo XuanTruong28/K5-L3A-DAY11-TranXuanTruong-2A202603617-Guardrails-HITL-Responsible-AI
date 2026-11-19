@@ -41,12 +41,13 @@ def content_filter(response: str) -> dict:
 
     # PII patterns to check
     PII_PATTERNS = {
-        # TODO: Add regex patterns for:
-        # - VN phone number: r"0\d{9,10}"
-        # - Email: r"[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}"
-        # - National ID (CMND/CCCD): r"\b\d{9}\b|\b\d{12}\b"
-        # - API key pattern: r"sk-[a-zA-Z0-9-]+"
-        # - Password pattern: r"password\s*[:=]\s*\S+"
+        "VN phone": r"(?<!\w)(?:0|\+84|84)(?:[ .-]?\d){9,10}(?!\w)",
+        "Email": r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}",
+        "National ID": r"(?<!\w)(?:\d{12}|\d{9})(?!\w)",
+        "API key": r"\bsk-[a-zA-Z0-9_-]+\b",
+        "Password": r"\b(?:password|mật khẩu|mat khau)\s*(?::|=|\bis\b|\blà\b)\s*[^\s,;]+",
+        "Demo password": r"\badmin123\b",
+        "Internal host": r"\b(?:[a-z0-9-]+\.)+internal\b(?::\d+)?",
     }
 
     for name, pattern in PII_PATTERNS.items():
@@ -154,7 +155,7 @@ class OutputGuardrailPlugin(base_plugin.BasePlugin):
         """Extract text from LLM response."""
         text = ""
         if hasattr(llm_response, "content") and llm_response.content:
-            for part in llm_response.content.parts:
+            for part in llm_response.content.parts or []:
                 if hasattr(part, "text") and part.text:
                     text += part.text
         return text
@@ -172,16 +173,25 @@ class OutputGuardrailPlugin(base_plugin.BasePlugin):
         if not response_text:
             return llm_response
 
-        # TODO: Implement logic:
-        # 1. Call content_filter(response_text)
-        #    - If issues found: replace llm_response.content with redacted version
-        #    - Increment self.redacted_count
-        # 2. If use_llm_judge: call llm_safety_check(response_text)
-        #    - If unsafe: replace llm_response.content with a safe message
-        #    - Increment self.blocked_count
-        # 3. Return llm_response (possibly modified)
+        result = content_filter(response_text)
+        if not result["safe"]:
+            # Replace the whole content so a secret split across text parts
+            # cannot survive in an unfiltered original part.
+            llm_response.content = types.Content(
+                role="model",
+                parts=[types.Part.from_text(text=result["redacted"])],
+            )
+            self.redacted_count += 1
 
-        return llm_response  # TODO: modify if needed
+        if self.use_llm_judge:
+            verdict = await llm_safety_check(result["redacted"])
+            if not verdict["safe"]:
+                llm_response.content = types.Content(
+                    role="model",
+                    parts=[types.Part.from_text(text="Output guardrail: response blocked for safety.")],
+                )
+                self.blocked_count += 1
+        return llm_response
 
 
 # ============================================================

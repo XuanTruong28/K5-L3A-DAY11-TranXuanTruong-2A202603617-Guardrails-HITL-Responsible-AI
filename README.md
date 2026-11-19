@@ -1,5 +1,79 @@
 # Day 11 — Controlled Agent Security (2026)
 
+## Thông tin bài nộp
+
+- Họ tên: **Trần Xuân Trường**
+- MSSV: **2A202603617**
+- Lớp: **K5-L3A**
+- Repo nộp hiện tại: `K5-L3A-TranXuanTruong-2A202603617-Guardrails-HITL-Responsible-AI`.
+  Tên/link repo được giữ nguyên theo hướng dẫn trực tiếp của mentor.
+
+### Cấu hình thực tế và cách chạy
+
+Dùng Python **3.12**; NeMo được pin trong requirements yêu cầu Python dưới 3.14.
+Chạy tại thư mục gốc repo bằng PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env  # Chỉ thực hiện khi chưa có .env
+```
+
+Điền key thật vào `.env` local. Các dòng sau chỉ minh họa tên biến;
+không đưa key thật vào README hoặc commit `.env`:
+
+```dotenv
+OPENROUTER_API_KEY=YOUR_OPENROUTER_KEY
+RED_TEAM_PROVIDER=openai
+OPENAI_API_KEY=YOUR_OPENPROVIDER_KEY
+OPENAI_BASE_URL=https://openprovider.tuanpq.com/v1
+OPENAI_MODEL=gemini-3.8-flash-medium
+```
+
+Blue giữ nguyên model `liquid/lfm-3-1.7b:free`. Red và Red Advance dùng chung
+gateway OpenProvider qua SDK tương thích OpenAI; NeMo dùng cùng base URL,
+key và model Red. Giá trị provider `openai` biểu thị nhánh kết nối SDK,
+không khẳng định gateway đang phục vụ model OpenAI.
+Theo hướng dẫn mentor do học viên cung cấp, CP4 được dùng model khác mặc định;
+rubric starter bên dưới vẫn được giữ để đối chiếu.
+
+```powershell
+python src/main.py --part 2
+python src/main.py --part 3
+python src/main.py --part 4
+pytest tests/smoke -q
+pytest tests/public -q
+python scripts/grade.py --submission-dir . --out outputs/grade_report.json
+```
+
+Nếu terminal gặp lỗi encoding, dùng `python -X utf8 src/main.py --part 4`.
+Lệnh part 3/4 gọi API và tạo artifact thực tế; không sửa tay JSON kết quả.
+
+### Phần đã triển khai và bằng chứng
+
+- CP2: chuẩn hóa Unicode, phát hiện injection, lọc chủ đề và redact secret/PII.
+- CP3: rate limit sliding window theo user; audit và monitoring là observer;
+  input plugins được gọi theo thứ tự rate limit → input guardrail, sau đó Blue
+  runner áp dụng output guardrail. Egress chỉ cho endpoint HTTPS được phép
+  với payload không chứa dữ liệu nhạy cảm; không thực hiện giao dịch thật.
+- Suite CP3: 5 câu an toàn, 7 tấn công, 3 case biên; spam là input-layer probe
+  để tránh gọi LLM 15 lần. Các câu an toàn được gửi đến Blue LLM thật.
+- CP4: 5 kỹ thuật prompt; prompt multi-step là leo thang trong một request,
+  chưa phải hội thoại nhiều lượt. Secret thử nghiệm là dữ liệu DEMO của lab.
+- Lần tự kiểm đã ghi nhận: 39 smoke + 10 public tests pass;
+  grader báo `technical_failure: false`. Kết quả CP4 mới nhất: Red leak 3/5,
+  Red Advance leak 0/5. B1 là bằng chứng đề nghị xét bonus, chờ grader replay;
+  chưa đạt B2 và không tự xác nhận điểm số.
+- AI hỗ trợ implementation và soạn prompt; học viên cần đọc hiểu, điều chỉnh
+  và giải thích được code/prompt theo RULES trước khi nộp.
+
+Artifact nằm trong `outputs/`: `results.json`, `attack_results.json`,
+`audit_log.json`, `metrics.json`, `unsafe_attack_result.json`,
+`guards_attack_result.json`; `grade_report.json` và `lab_report.md` được
+`scripts/grade.py` tự sinh. Commit các artifact này cùng code, giữ `.env`
+và `.venv` ở local, push rồi nộp link cá nhân lên LMS.
+
 > 👤 **Hình thức:** bài tập **cá nhân** (1 người / 1 MSSV).  
 > 🎯 **Mục tiêu:** đóng vai **Blue Team** để học cách xây Guardrails phòng thủ, rồi đóng vai **Red Team** để tấn công agent **Red** hoặc **Red Advance**.  
 > ✅ Làm theo **Checkpoint 1 → 5** trong [`CHECKPOINTS.md`](CHECKPOINTS.md) · nộp theo [`SUBMISSION.md`](SUBMISSION.md).
